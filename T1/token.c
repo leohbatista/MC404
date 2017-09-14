@@ -47,6 +47,6 @@ void imprimeListaTokens() {
     printf("Token %d\n", i);
     printf("\tTipo: %d\n", (int) tokens[i].tipo);
     printf("\tPalavra: %s\n", tokens[i].palavra);
-    printf("\tLinha: %u", tokens[i].linha);
+    printf("\tLinha: %u\n", tokens[i].linha);
   }
 }

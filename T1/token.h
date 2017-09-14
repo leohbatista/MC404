@@ -1,7 +1,7 @@
 #ifndef TOKEN_H
 #define TOKEN_H
 
-typedef enum TipoDoToken {Instrucao, Diretiva, DefRotulo, Hexadecimal, Decimal, Rotulo, Simbolo} TipoDoToken;
+typedef enum TipoDoToken {Instrucao, Diretiva, DefRotulo, Hexadecimal, Decimal, Nome} TipoDoToken;
 
 typedef struct Token {
   TipoDoToken tipo;
