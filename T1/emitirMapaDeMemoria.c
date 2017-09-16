@@ -7,6 +7,6 @@
  */
 int emitirMapaDeMemoria()
 {
-  printf("Você deve implementar esta função para a parte 2.\n");
+  //printf("Você deve implementar esta função para a parte 2.\n");
   return 0;
 }
