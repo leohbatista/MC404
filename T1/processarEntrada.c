@@ -1,3 +1,6 @@
+// Trabalho 1 - Montador para a arquitetura do computador IAS - Parte 1
+// Autor: Leonardo Henrique Batista - 171985  
+
 #include "montador.h"
 #include <stdio.h>
 #include <string.h>
@@ -23,34 +26,41 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 	int i = 0;
 	int j = 0;
 
+	// Tratamento do vetor de caracteres da entrada
 	for (i = 0; i < tamanho; i++) {
 		
+		// Análise inicial dos possíveis tipos de tokens
 		if(isspace(entrada[i])) {
+			// Termina um comentario e reseta a flag de diretivas ao terminar uma linha
 			if(entrada[i] == '\n') {
 				flagComment = 0;
 				flagDir = 0;
 				line++;
 			}
 		} else if(flagComment) {
+			// Ignora caso esteja dentro de um comentario
 			continue;
 		} else if(entrada[i] == '#') {
+			// Habilita a flag de comentario
 			flagComment = 1;
 		} else if(entrada[i] == '.') {
+			// Habilita a flag de diretiva
 			flagDir = 1;
 
+			// Le a diretiva
 			j = 0;
-			read[j++] = entrada[i++];
 			while(!isspace(entrada[i]) && entrada[i] != 0) {
 				read[j++] = entrada[i++];
 			}
-
 			read[j] = '\0';
 			
 			if(entrada[i] == '\n') {
 				i--;
 			}
 
+			// Verifica se eh uma diretiva valida
 			if(!strcmp(".org",read) || !strcmp(".set",read) || !strcmp(".word",read) || !strcmp(".wfill",read) || !strcmp(".align",read)) {
+				// Armazena o token da diretiva
 				char * palavra;
 				palavra = malloc((j+1)*sizeof(char));
 				strcpy(palavra,read);
@@ -61,13 +71,16 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 				adicionarToken(tk);
 			} else {
 				fprintf(stderr,"ERRO LEXICO: palavra inválida na linha %d!\n",line);
-				return -1;
+				return 1;
 			}
+
 		} else if(isalpha(entrada[i]) || entrada[i] == '_') {
 			Token tk;
 			int countDoisPontos = 0;
 
+			// Define o tipo default
 			if(flagDir) {
+				// Pos diretiva
 				tk.tipo = Nome;
 			} else if (isupper(entrada[i])) {
 				tk.tipo = Instrucao;
@@ -75,6 +88,7 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 				tk.tipo = Nome;
 			}
 			
+			// Verifica se eh argumento de instrucao e realiza a leitura do token
 			j = 0;
 			if(i > 0 && entrada[i-1] == '"') {
 				tk.tipo = Nome;
@@ -89,25 +103,27 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 					read[j++] = entrada[i++];
 				}
 			}
-
 			read[j] = '\0';
 
 			if(entrada[i] == '\n') {
 				i--;
 			}
 
+			// Trata erros de definicao de rotulo
 			if(isdigit(read[0]) || countDoisPontos > 1) {
 				fprintf(stderr,"ERRO LEXICO: palavra inválida na linha %d!\n",line);
-				return -1;
+				return 1;
 			}
 
+			// Verifica se de fato eh definicao de rotulo ou eh erro lexico
 			if(read[j-1] == ':') {
 				tk.tipo = DefRotulo;
 			} else if (countDoisPontos > 0) {
 				fprintf(stderr,"ERRO LEXICO: palavra inválida na linha %d!\n",line);
-				return -1;
+				return 1;
 			}
 
+			// Armazena o token
 			char * palavra;
 			palavra = malloc((j+1)*sizeof(char));
 			strcpy(palavra,read);
@@ -118,6 +134,7 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 			Token tk;
 			tk.linha = line;
 
+			// Verifica o tipo do numero, le e verifica se eh valido
 			j = 0;
 			if(entrada[i+1] == 'x') {
 				read[0] = '0';
@@ -130,7 +147,7 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 						read[j++] = entrada[i++];
 					} else {
 						fprintf(stderr,"ERRO LEXICO: palavra inválida na linha %d!\n",line);
-						return -1;
+						return 1;
 					}					
 				}
 			} else {
@@ -140,40 +157,42 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 						read[j++] = entrada[i++];
 					} else {
 						fprintf(stderr,"ERRO LEXICO: palavra inválida na linha %d!\n",line);
-						return -1;
+						return 1;
 					}					
 				}
 			}
-
 			read[j] = '\0';
 			if(entrada[i] == '\n') {
 				i--;
 			}
 
+			// Armazena o token
 			char * palavra;
 			palavra = malloc((j+1)*sizeof(char));
 			strcpy(palavra,read);
 			tk.palavra = palavra;
 			adicionarToken(tk);
 		} else if(entrada[i] != '"' || entrada[i] != 0) {
-			//fprintf(stderr,"ERRO LEXICO: palavra inválida na linha %d!\n",line);
-			//return -1;
+			fprintf(stderr,"ERRO LEXICO: palavra inválida na linha %d!\n",line);
+			return 1;
 		}
 	}
 
+	// Verificacao de erros gramaticais
 	int tokenCount = getNumberOfTokens();
 	Token code[4];
-	i = 0;
-	int pos = 0;
 	j = 0;
+	
+	// Tratamento por linha de codigo
 	for (i = 1; i < line; i++) {
+		// Obtencao dos tokens de uma linha
 		while(pos < tokenCount) {
 			Token tk = recuperaToken(pos);
-			//printf("%d %s\n",tk.linha,tk.palavra);
 			if(tk.linha == i) {
+				// Dispara erro se a quantidade maxima de tokens por linha eh ultrapassada
 				if(j == 4) {
 					fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-					return -1;
+					return 1;
 				}
 				code[j] = tk;
 				j++;
@@ -184,21 +203,23 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 			}	
 		}
 		
+		// Analisa se os tokens estão numa ordem valida dentro da linha
 		int k = 0;
 		int flagInstDir = 0;
 		int flagDefRot = 0;
 		while(k < j) {
-			//printf("%d %s %d %d %d\n",code[k].linha,code[k].palavra,code[k].tipo,j,flagInstDir);
+			
 			switch(code[k].tipo) {
+				
 				case Instrucao:
 					if (flagInstDir) {
 						fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-						return -1;
+						return 1;
 					} else if((k+1 < j && (code[k+1].tipo == Hexadecimal || code[k+1].tipo == Decimal || code[k+1].tipo == Nome)) || k+1 == j) {
 						k += 2;
 					} else {
 						fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-						return -1;
+						return 1;
 					}
 					flagInstDir = 1;
 					break;
@@ -206,20 +227,20 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 				case Diretiva:
 					if (flagInstDir) {
 						fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-						return -1;
+						return 1;
 					} else if(!strcmp(".org",code[k].palavra)) {
 						if(k+1 < j && (code[k+1].tipo == Hexadecimal || code[k+1].tipo == Decimal)) {
 							k += 2;
 						} else {
 							fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-							return -1;
+							return 1;
 						}
 					} else if (!strcmp(".set",code[k].palavra)) {
 						if(k+2 < j && (code[k+1].tipo == Nome) && (code[k+2].tipo == Hexadecimal || code[k+2].tipo == Decimal)) {
 							k += 3;
 						} else {
 							fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-							return -1;
+							return 1;
 
 						}
 					} else if (!strcmp(".word",code[k].palavra)) { 
@@ -227,14 +248,14 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 							k += 2;
 						} else {
 							fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-							return -1;
+							return 1;
 						}
 					} else if (!strcmp(".wfill",code[k].palavra)) {
 						if(k+2 < j && (code[k+1].tipo == Decimal) && (code[k+2].tipo == Hexadecimal || code[k+2].tipo == Decimal || code[k+2].tipo == Nome)) {
 							k += 3;
 						} else {
 							fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-							return -1;
+							return 1;
 
 						}
 					} else if (!strcmp(".align",code[k].palavra)) {
@@ -242,33 +263,34 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 							k += 2;
 						} else {
 							fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-							return -1;
+							return 1;
 						}
 					} else {
 						fprintf(stderr,"Foi nesse ERRO GRAMATICAL: palavra na linha %d!\n",i);
-						return -1;
+						return 1;
 					}
 
 					flagInstDir = 1;
-
 					break;
+
 				case DefRotulo:
 					if (flagDefRot) {
 						fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-						return -1;
+						return 1;
 					} else if(k+1 < j && (code[k+1].tipo == DefRotulo || code[k+1].tipo == Hexadecimal || code[k+1].tipo == Decimal || code[k+1].tipo == Nome)) {
 						fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-						return -1;
+						return 1;
 					} else {
 						k++;
 						flagDefRot = 1;
 					}
 					break;
+
 				case Hexadecimal:
 				case Decimal:
 				case Nome:
 					fprintf(stderr,"ERRO GRAMATICAL: palavra na linha %d!\n",i);
-					return -1;
+					return 1;
 					break;
 			}
 		}
@@ -277,4 +299,3 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 	imprimeListaTokens();
   	return 0; 
 }
-
