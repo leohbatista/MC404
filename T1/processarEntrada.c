@@ -174,7 +174,7 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 			adicionarToken(tk);
 		} else if(entrada[i] != '"' || entrada[i] != 0) {
 			fprintf(stderr,"ERRO LEXICO: palavra inválida na linha %d!\n",line);
-			return 1;
+			return 1; 
 		}
 	}
 
@@ -296,6 +296,6 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 		}
 	}
 
-	imprimeListaTokens();
+	//imprimeListaTokens();
   	return 0; 
 }
