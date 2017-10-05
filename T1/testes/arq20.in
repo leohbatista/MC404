@@ -1,0 +1,9 @@
+#checa se a instrucao de jump ta funcionando com endereco a direita
+RSH
+RSH
+RSH
+varFill: 
+JUMP varFill
+.align 33
+.wfill 50 varFill
+

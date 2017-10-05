@@ -1,24 +1,31 @@
+// Trabalho 1 - Montador para a arquitetura do computador IAS - Parte 2
+// Autor: Leonardo Henrique Batista - 171985  
+
 #include "montador.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
 
+// Definicao da constante com o numero de palavras de memoria
 #ifndef NPALAVRAS
 #define NPALAVRAS 1024
 #endif
 
+// Estrutura para armazenar dados de um simbolo
 typedef struct Simbolo {
 	char * chave;
 	int valor;
 } Simbolo;
 
+// Estrutura para armazenar dados de um rotulo
 typedef struct Rotulo {
 	char chave[65];
 	int valor;
 	int alinhamento;
 } Rotulo;
 
+// Definicao das funcoes
 int palavraDecimalParaDecimal(char * palavra);
 int palavraHexadecimalParaDecimal(char * palavra);
 int potencia(int base,int expoente);
@@ -28,23 +35,29 @@ int potencia(int base,int expoente);
  *  0 caso não haja erro.
  */
 int emitirMapaDeMemoria() {
+	// Matriz do mapa de memoria
 	char mapaMemoria[NPALAVRAS][10];
+
+	//Vetor de flags de preenchimento
 	int flagPreenchido[NPALAVRAS];
+	
+	// Contadores e flags
 	int i;
 	int qtdeSimb = 0;
 	int qtdeRot = 0;
+	int pontoMontagem = 0;
+	int flagDireita = 0;
 	int nTokens = getNumberOfTokens();
 
+	// Alocacao do vetor de simbolos
 	Simbolo * simbolos;
 	simbolos = (Simbolo *) malloc((nTokens/3) * sizeof(Simbolo)); 
 	
+	// Alocacao do vetor de rotulos
 	Rotulo * rotulos;
 	rotulos = (Rotulo *) malloc(nTokens * sizeof(Rotulo));
 
-	int pontoMontagem = 0;
-	int flagDireita = 0;
-
-	// Inicializa a matriz do mapa de memoria e a flag de preenchimento 
+	// Inicializacao da matriz do mapa de memoria e das flags de preenchimento 
 	for (i = 0; i < NPALAVRAS; ++i) {
 		flagPreenchido[i] = 0;
 
@@ -53,9 +66,14 @@ int emitirMapaDeMemoria() {
 		}		
 	}
 
+	// Pre-montagem identificando os simbolos e definicoes de
+	// rotulos e armazenando-os
 	for (i = 0; i < getNumberOfTokens(); i++){
 		Token tk = recuperaToken(i);
+		
+		// Avalia o tipo de token e processa endereco de montagem e alinhamento
 		switch(tk.tipo) {
+			
 			case Instrucao:
 				if(flagDireita) {
 					flagDireita = 0;
@@ -64,8 +82,10 @@ int emitirMapaDeMemoria() {
 					flagDireita = 1;
 				}
 				break;
+
 			case Diretiva:
 				if(!strcmp(".org",tk.palavra)) {
+					// Avanca para o endereco especificado
 					if(recuperaToken(i+1).tipo == Hexadecimal) {
 						pontoMontagem = palavraHexadecimalParaDecimal(tk.palavra);
 					} else if(recuperaToken(i+1).tipo == Decimal) {
@@ -73,7 +93,9 @@ int emitirMapaDeMemoria() {
 					}
 					flagDireita = 0;
 					i++;
+
 				} else if(!strcmp(".set",tk.palavra)) {
+					// Identifica e armazena o simbolo no vetor
 					simbolos[qtdeSimb].chave = recuperaToken(i+1).palavra;
 					if(recuperaToken(i+2).tipo == Hexadecimal) {
 						simbolos[qtdeSimb].valor = palavraHexadecimalParaDecimal(recuperaToken(i+2).palavra);
@@ -82,16 +104,22 @@ int emitirMapaDeMemoria() {
 					}
 					qtdeSimb++;
 					i += 2;
+
 				} else if (!strcmp(".word",tk.palavra)) { 
+					// Avanca uma posicao
 					pontoMontagem++;
 					flagDireita = 0;
 					i++;
+
 				} else if (!strcmp(".wfill",tk.palavra)) {
+					// Avanca n posicoes
 					int n = palavraDecimalParaDecimal(recuperaToken(i+1).palavra);
 					pontoMontagem += n;
 					flagDireita = 0;
 					i += 2;
+
 				} else if (!strcmp(".align",tk.palavra)) {
+					// Alinha o ponto de montagem
 					int align = palavraDecimalParaDecimal(recuperaToken(i+1).palavra);
 					if (flagDireita) {
 						pontoMontagem++;
@@ -101,15 +129,18 @@ int emitirMapaDeMemoria() {
 						pontoMontagem++;
 					}
 					i++;
+
 				}
 				break;
+
 			case DefRotulo:
+				// Identifica a definicao do rotulo e armazena os dados 
 				memcpy(rotulos[qtdeRot].chave,tk.palavra,strlen(tk.palavra)-1);
 				rotulos[qtdeRot].valor = pontoMontagem;
 				rotulos[qtdeRot].alinhamento = flagDireita;
-				//printf("%s 0x%x %d\n",rotulos[qtdeRot].chave,rotulos[qtdeRot].valor,rotulos[qtdeRot].alinhamento);
 				qtdeRot++;
 				break;
+
 			case Hexadecimal:
 			case Decimal:
 			case Nome:	
@@ -117,16 +148,23 @@ int emitirMapaDeMemoria() {
 		}
 	}
 
+	// Reinicializa as variaveis de montagem
 	pontoMontagem = 0;
 	flagDireita = 0;
 
+	// Processa a montagem para os tokens
 	for (i = 0; i < getNumberOfTokens(); i++) {
 		Token tk = recuperaToken(i);
+		
+		// Identifica o tipo do token
 		switch(tk.tipo) {
 			case Instrucao:
+				// Valida se nao ha sobrescricao
 				if(!flagPreenchido[pontoMontagem] || (flagDireita && !strncmp("00000",&mapaMemoria[pontoMontagem][5],5))) {
 					int flagRecebeEndereco = 0;
 					char dig1,dig2;
+
+					// Trata cada instrucao e armazena o codigo hexadecimal
 					if(!strcmp("LOAD",tk.palavra)) {
 						flagRecebeEndereco = 1;
 						if(flagDireita) {
@@ -186,9 +224,10 @@ int emitirMapaDeMemoria() {
 						dig1 = '0';
 						dig2 = 'D';
 
+						// Processa se o parametro esta alinhado a direita
 						if(recuperaToken(i+1).tipo == Nome) {
-							int flagSymRot = 0;
-							for (int m = 0; m < qtdeRot && !flagSymRot; m++) {
+							int flagRot = 0;
+							for (int m = 0; m < qtdeRot && !flagRot; m++) {
 								if (!strcmp(rotulos[m].chave,recuperaToken(i+1).palavra)) {
 									
 									if(rotulos[m].alinhamento) {
@@ -196,11 +235,12 @@ int emitirMapaDeMemoria() {
 										dig2 = 'E';
 									} 
 
-									flagSymRot = 1;
+									flagRot = 1;
 								}
 							}
 
-							if(!flagSymRot) {
+							// Verifica se nao encontrou o rotulo
+							if(!flagRot) {
 								fprintf(stderr,"USADO MAS NÃO DEFINIDO: %s!\n",recuperaToken(i+1).palavra);
 								return 1;
 							}
@@ -212,9 +252,10 @@ int emitirMapaDeMemoria() {
 						dig1 = '0';
 						dig2 = 'F';
 
+						// Processa se o parametro esta alinhado a direita
 						if(recuperaToken(i+1).tipo == Nome) {
-							int flagSymRot = 0;
-							for (int m = 0; m < qtdeRot && !flagSymRot; m++) {
+							int flagRot = 0;
+							for (int m = 0; m < qtdeRot && !flagRot; m++) {
 								if (!strcmp(rotulos[m].chave,recuperaToken(i+1).palavra)) {
 									
 									if(rotulos[m].alinhamento) {
@@ -222,11 +263,12 @@ int emitirMapaDeMemoria() {
 										dig2 = '0';
 									} 
 
-									flagSymRot = 1;
+									flagRot = 1;
 								}
 							}
 
-							if(!flagSymRot) {
+							// Verifica se nao encontrou o rotulo
+							if(!flagRot) {
 								fprintf(stderr,"USADO MAS NÃO DEFINIDO: %s!\n",recuperaToken(i+1).palavra);
 								return 1;
 							}
@@ -310,9 +352,10 @@ int emitirMapaDeMemoria() {
 						dig1 = '1';
 						dig2 = '2';
 
+						// Processa se o parametro esta alinhado a direita
 						if(recuperaToken(i+1).tipo == Nome) {
-							int flagSymRot = 0;
-							for (int m = 0; m < qtdeRot && !flagSymRot; m++) {
+							int flagRot = 0;
+							for (int m = 0; m < qtdeRot && !flagRot; m++) {
 								if (!strcmp(rotulos[m].chave,recuperaToken(i+1).palavra)) {
 									
 									if(rotulos[m].alinhamento) {
@@ -320,17 +363,19 @@ int emitirMapaDeMemoria() {
 										dig2 = '3';
 									} 
 
-									flagSymRot = 1;
+									flagRot = 1;
 								}
 							}
 
-							if(!flagSymRot) {
+							// Verifica se nao encontrou o rotulo
+							if(!flagRot) {
 								fprintf(stderr,"USADO MAS NÃO DEFINIDO: %s!\n",recuperaToken(i+1).palavra);
 								return 1;
 							}
 						}
 					}
 
+					// Escreve no mapa de memoria de acordo com o alinhamento
 					if(flagDireita) {
 						mapaMemoria[pontoMontagem][5] = dig1;
 						mapaMemoria[pontoMontagem][6] = dig2;
@@ -339,8 +384,10 @@ int emitirMapaDeMemoria() {
 						mapaMemoria[pontoMontagem][1] = dig2;
 					}
 
+					// Processa e grava o parametro na memoria se existir
 					if(flagRecebeEndereco) {
 						int m,n;
+
 						if(recuperaToken(i+1).tipo == Hexadecimal) {
 							if(flagDireita) {
 								for (m = strlen(recuperaToken(i+1).palavra)-1,n = 9; m >= 2 && n >= 7; m--,n--) {
@@ -351,8 +398,7 @@ int emitirMapaDeMemoria() {
 									mapaMemoria[pontoMontagem][n] = toupper(recuperaToken(i+1).palavra[m]);
 								}
 							}
-							
-							
+														
 						} else if(recuperaToken(i+1).tipo == Decimal) {
 							char hex[10];
 							sprintf(hex, "%x", palavraDecimalParaDecimal(recuperaToken(i+1).palavra));
@@ -365,8 +411,11 @@ int emitirMapaDeMemoria() {
 									mapaMemoria[pontoMontagem][n] = toupper(hex[m]);
 								}
 							}
+
 						} else {
 							int flagSymRot = 0;
+							
+							// Busca no vetor de simbolos
 							for (m = 0; m < qtdeSimb && !flagSymRot; m++) {
 								if (!strcmp(simbolos[m].chave,recuperaToken(i+1).palavra)) {
 									char hex[10];
@@ -385,6 +434,7 @@ int emitirMapaDeMemoria() {
 								}
 							}
 
+							// Busca no vetor de rotulos
 							for (m = 0; m < qtdeRot && !flagSymRot; m++) {
 								if (!strcmp(rotulos[m].chave,recuperaToken(i+1).palavra)) {
 									char hex[10];
@@ -403,15 +453,18 @@ int emitirMapaDeMemoria() {
 								}
 							}
 
+							// Verifica se nao encontrou o simbolo/rotulo
 							if(!flagSymRot) {
 								fprintf(stderr,"USADO MAS NÃO DEFINIDO: %s!\n",recuperaToken(i+1).palavra);
 								return 1;
 							}
+
 						}
-						i++; 
+
+						i++;
 					}
 
-
+					// Atualiza as variaveis de montagem
 					flagPreenchido[pontoMontagem] = 1;
 					if(flagDireita) {
 						flagDireita = 0;
@@ -419,28 +472,36 @@ int emitirMapaDeMemoria() {
 					} else {
 						flagDireita = 1;
 					}
+
 				} else {
+					// Dispara um erro caso nao encontre a instrucao
 					fprintf(stderr,"Impossível montar o código!\n");
 					return 1;
 				}
 
 				break;
+
 			case Diretiva:
 				if(!strcmp(".org",tk.palavra)) {
+					// Avanca a montagem para o endereco especificado
 					if(recuperaToken(i+1).tipo == Hexadecimal) {
 						pontoMontagem = palavraHexadecimalParaDecimal(recuperaToken(i+1).palavra);
 					} else if(recuperaToken(i+1).tipo == Decimal) {
 						pontoMontagem = palavraDecimalParaDecimal(recuperaToken(i+1).palavra);
 					} 
 					i++;
+
 				} else if (!strcmp(".word",tk.palavra)) { 
 					if(flagDireita) {
+						// Erro se o alinhamento eh invaildo
 						fprintf(stderr,"Impossível montar o código!\n");
 						return 1;
 					} else if (flagPreenchido[pontoMontagem]){
+						// Erro se ha sobrescricao
 						fprintf(stderr,"Impossível montar o código!\n");
 						return 1;
 					} else {
+						// Preenche o mapa de memoria com o valor 
 						int m,n;
 						if(recuperaToken(i+1).tipo == Hexadecimal) {
 							for (m = strlen(recuperaToken(i+1).palavra)-1,n = 9; m >= 2 && n >= 0; m--,n--) {
@@ -454,8 +515,11 @@ int emitirMapaDeMemoria() {
 							for (m = strlen(hex)-1,n = 9; m >= 0 && n >= 0; m--,n--) {
 								mapaMemoria[pontoMontagem][n] = toupper(hex[m]);
 							}
+
 						} else {
 							int flagSymRot = 0;
+
+							// Busca no vetor de simbolos
 							for (m = 0; m < qtdeSimb && !flagSymRot; m++) {
 								if (!strcmp(simbolos[m].chave,recuperaToken(i+1).palavra)) {
 									char hex[10];
@@ -468,6 +532,7 @@ int emitirMapaDeMemoria() {
 								}
 							}
 
+							// Busca no vetor de rotulos
 							for (m = 0; m < qtdeRot && !flagSymRot; m++) {
 								if (!strcmp(rotulos[m].chave,recuperaToken(i+1).palavra)) {
 									char hex[10];
@@ -480,27 +545,33 @@ int emitirMapaDeMemoria() {
 								}
 							}
 
+							// Verifica se nao encontrou o simbolo/rotulo
 							if(!flagSymRot) {
 								fprintf(stderr,"USADO MAS NÃO DEFINIDO: %s!\n",recuperaToken(i+1).palavra);
 								return 1;
 							}
 						} 
 
+						// Atualiza as variaveis de montagem
 						flagPreenchido[pontoMontagem] = 1;
 						pontoMontagem++;
 					}
 					i++;
+
 				} else if (!strcmp(".wfill",tk.palavra)) {
 					if(flagDireita) {
+						// Erro se o alinhamento eh invaildo
 						fprintf(stderr,"Impossível montar o código!\n");
 						return 1;
 					} else {
+						// Le o valor a ser salvo no mapa de memoria
 						char temp[11] = {'0','0','0','0','0','0','0','0','0','0','\0'};
 						int m,n;
 						if(recuperaToken(i+2).tipo == Hexadecimal) {
 							for (m = strlen(recuperaToken(i+2).palavra)-1,n = 9; m >= 2 && n >= 0; m--,n--) {
 								temp[n] = toupper(recuperaToken(i+2).palavra[m]);
 							}
+
 						} else if(recuperaToken(i+2).tipo == Decimal) {
 							char hex[10];
 							sprintf(hex, "%x", palavraDecimalParaDecimal(recuperaToken(i+2).palavra));
@@ -508,8 +579,11 @@ int emitirMapaDeMemoria() {
 							for (m = strlen(hex)-1,n = 9; m >= 0 && n >= 0; m--,n--) {
 								temp[n] = toupper(hex[m]);
 							}
+
 						} else {
 							int flagSymRot = 0;
+
+							// Busca no vetor de simbolos
 							for (m = 0; m < qtdeSimb && !flagSymRot; m++) {
 								if (!strcmp(simbolos[m].chave,recuperaToken(i+2).palavra)) {
 									char hex[10];
@@ -522,6 +596,7 @@ int emitirMapaDeMemoria() {
 								}
 							}
 
+							// Busca no vetor de rotulos
 							for (m = 0; m < qtdeRot && !flagSymRot; m++) {
 								if (!strcmp(rotulos[m].chave,recuperaToken(i+2).palavra)) {
 									char hex[10];
@@ -534,14 +609,18 @@ int emitirMapaDeMemoria() {
 								}
 							}
 
+							// Verifica se nao encontrou o simbolo/rotulo
 							if(!flagSymRot) {
 								fprintf(stderr,"USADO MAS NÃO DEFINIDO: %s!\n",recuperaToken(i+2).palavra);
 								return 1;
 							}
 						}
 
+						// Obtem a quantidade de palavras a serem preenchidas
 						n = palavraDecimalParaDecimal(recuperaToken(i+1).palavra);
 
+						// Preenche a memoria e atualiza as variaveis de montagem,
+						// verificando se ha sobrescricao
 						for (m = 0; m < n; m++){
 							if (flagPreenchido[pontoMontagem]){
 								fprintf(stderr,"Impossível montar o código!\n");
@@ -553,8 +632,10 @@ int emitirMapaDeMemoria() {
 							}								
 						}
 					}
-					i+=2;
+					i += 2;
+
 				} else if (!strcmp(".align",tk.palavra)) {
+					// Alinha as variaveis de montagem
 					int align = palavraDecimalParaDecimal(recuperaToken(i+1).palavra);
 					if (flagDireita) {
 						pontoMontagem++;
@@ -576,6 +657,7 @@ int emitirMapaDeMemoria() {
 		}
 	}
 
+	// Imprime o mapa de memoria
 	for (i = 0; i < NPALAVRAS; i++) {
 		if(flagPreenchido[i]) {
 			printf("%03X ",(int)(i & 0xFFF));
@@ -589,6 +671,7 @@ int emitirMapaDeMemoria() {
 	return 0;
 }
 
+// Funcao de conversao da string com um valor decimal para um inteiro decimal
 int palavraDecimalParaDecimal(char * palavra) {
 	int valor = 0;
 	int len = strlen(palavra);
@@ -600,6 +683,7 @@ int palavraDecimalParaDecimal(char * palavra) {
 	return valor;
 }
 
+// Funcao de conversao da string com um valor hexadecimal para um inteiro decimal
 int palavraHexadecimalParaDecimal(char * palavra) {
 	int valor = 0;
 	int len = strlen(palavra);
@@ -615,6 +699,7 @@ int palavraHexadecimalParaDecimal(char * palavra) {
 	return valor;
 }
 
+// Funcao de potencia matematica
 int potencia(int base,int expoente) {
 	int res = 1;
 	for (int i = 0; i < expoente; i++) {
