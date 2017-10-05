@@ -1,0 +1,5 @@
+#checa se o align ta funcionando
+RSH
+.align 1
+.wfill 50 varFill
+varFill: 
