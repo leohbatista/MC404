@@ -296,6 +296,6 @@ int processarEntrada(char* entrada, unsigned tamanho) {
 		}
 	}
 
-	//imprimeListaTokens();
+	imprimeListaTokens();
   	return 0; 
 }
