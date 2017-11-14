@@ -1,9 +1,0 @@
-# checa se consigo sobreescrever mapa
-# erro eh esperado
-.wfill 50 varFill
-varFill: 
-
-RSH
-
-.org 0x0000000000
-.wfill 2 3

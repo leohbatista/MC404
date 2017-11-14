@@ -1,1 +1,0 @@
-Impossível montar o código!
